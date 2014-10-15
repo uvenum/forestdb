@@ -1,0 +1,28 @@
+global start_time
+global finish_time
+global set_summary
+
+probe process("/usr/local/lib/libforestdb.so").mark("set_start")
+ {
+  tid_ = tid();
+  t = gettimeofday_us();
+  start_time[tid_] = t;
+ }
+
+probe process("/usr/local/lib/libforestdb.so").mark("set_finish")
+ {
+  tid_ = tid();
+  t = start_time[tid_]; delete start_time[tid_];
+  if (t) {
+    set_summary[tid_] <<< (gettimeofday_us() - t);
+  }
+ }
+
+probe end {
+  printf("\nFunction execution times by thread id\n");
+  printf("\ntid count min(us) avg(us) max(us)\n");
+  foreach (p in set_summary) {
+    printf("%d %d %d %d %d\n", p, @count(set_summary[p]),
+     @min(set_summary[p]), @avg(set_summary[p]), @max(set_summary[p]));
+  }
+}

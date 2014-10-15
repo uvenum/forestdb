@@ -42,6 +42,7 @@
 #include "internal_types.h"
 #include "compactor.h"
 #include "memleak.h"
+#include <sys/sdt.h>
 
 #ifdef __DEBUG
 #ifndef __DEBUG_FDB
@@ -1985,6 +1986,7 @@ static uint64_t _fdb_get_wal_threshold(fdb_handle *handle)
 LIBFDB_API
 fdb_status fdb_set(fdb_handle *handle, fdb_doc *doc)
 {
+    DTRACE_PROBE(forestdbtrace, set_start);
     uint64_t offset;
     struct docio_object _doc;
     struct filemgr *file;
@@ -2109,6 +2111,7 @@ fdb_set_start:
 
     filemgr_mutex_unlock(file);
 
+    DTRACE_PROBE(forestdbtrace, set_finish);
     return FDB_RESULT_SUCCESS;
 }
 
