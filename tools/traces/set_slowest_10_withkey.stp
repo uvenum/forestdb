@@ -1,0 +1,34 @@
+global start_time
+global finish_time
+global set_summary
+global maxsettime
+
+probe process("/usr/local/lib/libforestdb.so").mark("set_start")
+ {
+  tid_ = tid();
+  t = gettimeofday_us();
+  keyid = user_string_n($doc->key,$doc->keylen);
+  start_time[tid_,keyid] = t;
+ }
+
+probe process("/usr/local/lib/libforestdb.so").mark("set_finish")
+ {
+  tid_ = tid();
+  t2 = gettimeofday_us();
+  keyid = user_string_n($_doc->key,$_doc->length->keylen);
+  t = start_time[tid_,keyid]; delete start_time[tid_,keyid];
+  if (t) {
+    set_summary[tid_,keyid] <<< (t2 - t);
+  }
+ }
+
+probe end {
+  printf("\nTop 10 slowest SET times by key\n");
+  printf("tid      keyid                      execution time(us)\n");
+  foreach ([tid, key] in set_summary){
+       maxsettime[tid, key] = @max(set_summary[tid,key]);
+  }
+  foreach ([tid, key] in maxsettime- limit 10){
+       printf("%d   %s     %d\n", tid, key, maxsettime[tid,key]);
+  }
+}
